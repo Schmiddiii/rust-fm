@@ -10,3 +10,4 @@ edition = "2018"
 # boxion = {path="../boxion/"}
 boxion = {git = "https://github.com/Schmiddiii/boxion" }
 termion = "*"
+mime = "*"

@@ -6,6 +6,7 @@ mod fmloop;
 mod fzf;
 mod state;
 mod theme;
+mod utils;
 
 use crate::filemanager::{EntryType, FileManager};
 use crate::fmloop::start_loop;

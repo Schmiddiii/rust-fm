@@ -81,7 +81,7 @@ impl<'a, W: Write> FmState<'a, W> {
             return;
         }
 
-        self.fm.change_dir(&selection.unwrap()).unwrap_or(());
+        self.fm.open_child(&mut self.stdout, &selection.unwrap());
         self.reload();
     }
 

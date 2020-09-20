@@ -1,5 +1,13 @@
+use std::env::var;
 use std::io;
 use std::path::{Path, PathBuf};
+
+use std::process::Command;
+use termion::screen::*;
+
+use mime;
+
+use crate::utils::get_mime_type;
 
 /// Represents the management for the files
 #[derive(Clone)]
@@ -47,6 +55,37 @@ impl FileManager {
         }
 
         return Ok(result);
+    }
+
+    /// Opens a children by cd into directories or by xdg-open
+    pub fn open_child(&mut self, stdout: &mut dyn io::Write, dir: &str) {
+        let self_clone = self.clone();
+        let child_type = self_clone.get_type_of_child(dir);
+        match child_type {
+            Err(_) => {}
+            Ok(EntryType::Directory) => self.change_dir(dir).unwrap(),
+            Ok(EntryType::File) => {
+                let path_to_child = self.get_path_to_child(dir);
+                if path_to_child.is_err() {
+                    return;
+                }
+                match get_mime_type((*path_to_child.clone().unwrap()).to_str().unwrap())
+                    .unwrap()
+                    .type_()
+                {
+                    mime::TEXT => {
+                        let editor = var("EDITOR").unwrap();
+                        write!(stdout, "{}", ToMainScreen).unwrap();
+                        Command::new(editor)
+                            .arg(&*(path_to_child.unwrap()))
+                            .status()
+                            .expect("Command failed to launch");
+                        write!(stdout, "{}", ToAlternateScreen).unwrap();
+                    }
+                    _ => {}
+                }
+            }
+        }
     }
 
     /// Changes the directory of the file manager
