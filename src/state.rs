@@ -1,25 +1,24 @@
-use std::fs;
-use std::io::Write;
-use std::path::Path;
-use std::path::PathBuf;
+use std::fs::File;
+use std::io::{BufReader, Read, Write};
 
-// use crate::theme::std_theme;
+use crate::filemanager::{EntryType, FileManager};
 use crate::fzf::Fzf;
-use crate::theme::Types;
 
 use boxion::rect::Rect;
 use boxion::rects::listrectcolored::ListRectColored;
 
+/// Represents a state of the program
 pub struct FmState<'a, W: Write> {
-    pub path: PathBuf,
     pub stdout: W,
     pub path_rect: &'a Rect,
-    pub preview_rect_list: ListRectColored<'a, Types>,
-    pub main_rect_list: ListRectColored<'a, Types>,
-    pub fzf: Option<Fzf<char, (Types, String)>>,
+    pub preview_rect_list: ListRectColored<'a, EntryType>,
+    pub main_rect_list: ListRectColored<'a, EntryType>,
+    pub fzf: Option<Fzf<char, (EntryType, String)>>,
+    pub fm: FileManager,
 }
 
 impl<'a, W: Write> FmState<'a, W> {
+    /// Shows the current state
     pub fn show(&mut self) {
         self.main_rect_list.show(&mut self.stdout);
         self.preview();
@@ -27,8 +26,9 @@ impl<'a, W: Write> FmState<'a, W> {
         self.stdout.flush().unwrap();
     }
 
+    /// Resets the elements of main_rect_list and path_rect
     pub fn reload(&mut self) {
-        let mut contents = get_contents_name(self.path.as_path()).unwrap();
+        let mut contents = self.fm.get_contents().unwrap();
         if self.fzf.is_some() {
             contents = self.fzf.as_ref().unwrap().get_remaining();
         }
@@ -37,15 +37,11 @@ impl<'a, W: Write> FmState<'a, W> {
         self.main_rect_list.set_elements(contents);
         self.path_rect.clear(&mut self.stdout);
         self.path_rect
-            .write_trimmed(
-                &mut self.stdout,
-                self.path.canonicalize().unwrap().to_str().unwrap_or(""),
-                0,
-                0,
-            )
+            .write_trimmed(&mut self.stdout, &self.fm.get_path_string(), 0, 0)
             .unwrap();
     }
 
+    /// Handles a key press
     pub fn handle_key(&mut self, key: termion::event::Key) {
         match key {
             termion::event::Key::Char('J') => self.main_rect_list.next(),
@@ -59,7 +55,7 @@ impl<'a, W: Write> FmState<'a, W> {
                 self.open();
             }
             termion::event::Key::Esc => {
-                self.set_fzf(get_contents_name(self.path.as_path()).unwrap());
+                self.set_fzf(self.fm.get_contents().unwrap());
                 self.reload();
             }
             termion::event::Key::Char(a) => {
@@ -72,24 +68,24 @@ impl<'a, W: Write> FmState<'a, W> {
         }
     }
 
+    /// Change directory to the parent directory
     fn go_to_parent(&mut self) {
-        self.path.pop();
+        self.fm.change_dir("..").unwrap_or(());
         self.reload();
     }
 
+    /// Changes directory to the highlighted directory
     fn open(&mut self) {
         let selection = self.main_rect_list.get_selected();
         if selection.is_none() {
             return;
         }
-        self.path.push(&selection.unwrap());
-        if self.path.is_dir() {
-            self.reload();
-        } else {
-            self.path.pop();
-        }
+
+        self.fm.change_dir(&selection.unwrap()).unwrap_or(());
+        self.reload();
     }
 
+    /// Previews the currently selected file/folder in the preview rect
     fn preview(&mut self) {
         self.preview_rect_list.clear(&mut self.stdout);
         let selection = self.main_rect_list.get_selected();
@@ -97,18 +93,42 @@ impl<'a, W: Write> FmState<'a, W> {
             self.preview_rect_list.set_elements(vec![]);
             return;
         }
-        let mut selected = self.path.clone();
-        selected.push(&selection.unwrap());
-        if selected.is_dir() {
-            self.preview_rect_list
-                .set_elements(get_contents_name(&selected).unwrap());
+
+        let type_of_child = self
+            .fm
+            .get_type_of_child(&selection.clone().unwrap())
+            .unwrap_or(EntryType::Directory);
+        if type_of_child == EntryType::Directory {
+            let contents = self
+                .fm
+                .get_contents_of_child(&selection.unwrap())
+                .unwrap_or(vec![]);
+            self.preview_rect_list.set_elements(contents);
         } else {
-            self.preview_rect_list
-                .set_elements(vec![(Types::File, selected.to_str().unwrap().to_string())])
+            let path = self.fm.get_path_to_child(&selection.unwrap());
+            if path.is_err() {
+                return;
+            }
+
+            let file = File::open(path.unwrap());
+            if file.is_err() {
+                return;
+            }
+            let mut buf_reader = BufReader::new(file.unwrap());
+            let mut contents = String::new();
+
+            buf_reader.read_to_string(&mut contents).unwrap_or(0);
+
+            let elements: Vec<(EntryType, String)> = contents
+                .split('\n')
+                .map(|s| (EntryType::File, s.to_string()))
+                .collect();
+            self.preview_rect_list.set_elements(elements);
         }
     }
 
-    fn set_fzf(&mut self, contents: Vec<(Types, String)>) {
+    /// Sets up the fuzzy find to the contents of the directory
+    fn set_fzf(&mut self, contents: Vec<(EntryType, String)>) {
         self.fzf = Some(Fzf::new(
             contents
                 .clone()
@@ -117,34 +137,4 @@ impl<'a, W: Write> FmState<'a, W> {
                 .collect(),
         ));
     }
-
-}
-
-fn get_contents_name(path: &Path) -> std::io::Result<Vec<(Types, String)>> {
-    if !path.is_dir() {
-        return Ok(Vec::new());
-    }
-
-    let contents = fs::read_dir(path)?;
-    let mut result = Vec::new();
-
-    for entry in contents {
-        let entry_path = entry?.path();
-        let path_str = entry_path.to_str().unwrap_or("/");
-        let path = Path::new(path_str);
-        if path.is_dir() {
-            result.push((
-                Types::Directory,
-                String::from(path.file_name().unwrap().to_str().unwrap()),
-            ));
-        } else if path.is_file() {
-            result.push((
-                Types::File,
-                String::from(path.file_name().unwrap().to_str().unwrap()),
-            ));
-        }
-    }
-
-    // result.sort_unstable();
-    return Ok(result);
 }

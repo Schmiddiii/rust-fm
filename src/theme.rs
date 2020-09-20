@@ -1,23 +1,31 @@
+use crate::filemanager::EntryType;
 
-
-#[derive(Clone)]
-pub enum Types {
-    Directory,
-    File
-}
-
-pub fn std_theme(t: Types, b: bool) -> (&'static dyn termion::color::Color, &'static dyn termion::color::Color) {
-    match (t,b) {
-        (Types::Directory, false) => (&termion::color::Blue, &termion::color::Reset),
-        (Types::Directory, true) => (&termion::color::Reset, &termion::color::Blue),
-        (Types::File, false) => (&termion::color::Reset, &termion::color::Reset),
-        (Types::File, true) => (&termion::color::Reset, &termion::color::White),
+/// Standard theme used in the main list
+pub fn std_theme(
+    t: EntryType,
+    b: bool,
+) -> (
+    &'static dyn termion::color::Color,
+    &'static dyn termion::color::Color,
+) {
+    match (t, b) {
+        (EntryType::Directory, false) => (&termion::color::Blue, &termion::color::Reset),
+        (EntryType::Directory, true) => (&termion::color::Reset, &termion::color::Blue),
+        (EntryType::File, false) => (&termion::color::Reset, &termion::color::Reset),
+        (EntryType::File, true) => (&termion::color::Reset, &termion::color::White),
     }
 }
 
-pub fn std_theme_no_highlight(t: Types, b: bool) -> (&'static dyn termion::color::Color, &'static dyn termion::color::Color) {
-    match (t,b) {
-        (Types::Directory, _) => (&termion::color::Blue, &termion::color::Reset),
-        (Types::File, _) => (&termion::color::Reset, &termion::color::Reset),
+/// Standard theme without highlights used in the preview
+pub fn std_theme_no_highlight(
+    t: EntryType,
+    b: bool,
+) -> (
+    &'static dyn termion::color::Color,
+    &'static dyn termion::color::Color,
+) {
+    match (t, b) {
+        (EntryType::Directory, _) => (&termion::color::Blue, &termion::color::Reset),
+        (EntryType::File, _) => (&termion::color::Reset, &termion::color::Reset),
     }
 }

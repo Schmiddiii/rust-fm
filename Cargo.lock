@@ -3,15 +3,16 @@
 [[package]]
 name = "boxion"
 version = "0.1.4"
+source = "git+https://github.com/Schmiddiii/boxion#842b8dc1be53489d6fc468831c4270c9b5ab3ddf"
 dependencies = [
  "termion",
 ]
 
 [[package]]
 name = "libc"
-version = "0.2.76"
+version = "0.2.77"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "755456fae044e6fa1ebbbd1b3e902ae19e73097ed4ed87bb79934a867c007bc3"
+checksum = "f2f96b10ec2560088a8e76961b00d47107b3a625fecb76dedb29ee7ccbf98235"
 
 [[package]]
 name = "numtoa"
@@ -36,7 +37,7 @@ dependencies = [
 
 [[package]]
 name = "rust-fm"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "boxion",
  "termion",
