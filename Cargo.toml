@@ -1,6 +1,6 @@
 [package]
 name = "rust-fm"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["Julian Schmidhuber <schmidhuberj2@protonmail.com>"]
 edition = "2018"
 

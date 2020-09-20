@@ -2,7 +2,7 @@ use std::env::var;
 use std::io;
 use std::path::{Path, PathBuf};
 
-use std::process::Command;
+use std::process::{Command, Stdio};
 use termion::screen::*;
 
 use mime;
@@ -16,7 +16,7 @@ pub struct FileManager {
 }
 
 /// Represents the type of a element in a directory
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum EntryType {
     Directory,
     File,
@@ -54,10 +54,12 @@ impl FileManager {
             }
         }
 
+        result.sort();
+
         return Ok(result);
     }
 
-    /// Opens a children by cd into directories or by xdg-open
+    /// Opens a children by cd into directories, using $EDITOR or by xdg-open
     pub fn open_child(&mut self, stdout: &mut dyn io::Write, dir: &str) {
         let self_clone = self.clone();
         let child_type = self_clone.get_type_of_child(dir);
@@ -81,8 +83,11 @@ impl FileManager {
                             .status()
                             .expect("Command failed to launch");
                         write!(stdout, "{}", ToAlternateScreen).unwrap();
+                        write!(stdout, "{}", termion::cursor::Hide).unwrap();
                     }
-                    _ => {}
+                    _ => {
+                        Command::new("xdg-open").arg(&*path_to_child.unwrap()).stdout(Stdio::null()).spawn().expect("Command failed to launch");
+                    }
                 }
             }
         }
