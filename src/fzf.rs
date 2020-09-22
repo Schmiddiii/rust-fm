@@ -67,4 +67,23 @@ impl<T: Eq + Clone, U: Clone> Fzf<T, U> {
 
         return self.get_remaining();
     }
+
+    pub fn get_value_of(&self, key: Vec<T>) -> Option<U> {
+        for el in self.elems.iter() {
+            if (*el).key == key {
+                return Some((*el).value.clone());
+            }
+        }
+        return None;
+    }
+
+    /// Changes the value of a element with the given key
+    pub fn change_value_of(&mut self, key: Vec<T>, value: U) {
+        for el in self.elems.iter_mut() {
+            if (*el).key == key {
+                (*el).value = value;
+                return;
+            }
+        }
+    }
 }

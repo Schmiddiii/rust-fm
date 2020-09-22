@@ -13,6 +13,7 @@ use crate::utils::get_mime_type;
 #[derive(Clone)]
 pub struct FileManager {
     pub path: PathBuf,
+    pub contents: Vec<(EntryType, String, bool)>
 }
 
 /// Represents the type of a element in a directory
@@ -27,8 +28,10 @@ impl FileManager {
     pub fn new(path: &str) -> FileManager {
         let mut fm = FileManager {
             path: PathBuf::from(path),
+            contents: vec![]
         };
         fm.canonicalize();
+        fm.set_contents();
         fm
     }
 
@@ -107,19 +110,31 @@ impl FileManager {
         }
 
         self.canonicalize();
+        self.set_contents();
 
         return Ok(());
     }
 
+    pub fn toggle_highlight_of(&mut self, str: String) {
+        for tup in self.contents.iter_mut() {
+            if tup.1 == str {
+                tup.2 = !tup.2;
+            }
+        }
+    }
+
     /// Get contents of the file manager
-    pub fn get_contents(&self) -> io::Result<Vec<(EntryType, String)>> {
-        return FileManager::get_contents_from_path(&self.path);
+    pub fn get_contents(&self) -> Vec<(EntryType, String, bool)> {
+        return self.contents.clone();
+    }
+
+    /// Sets the internal contents of the file manager
+    fn set_contents(&mut self) {
+        self.contents = FileManager::get_contents_from_path(&self.path).unwrap_or(vec![]).into_iter().map(|(t, s)| (t, s, false)).collect();
     }
 
     /// Get contents of the file manager at the given child
     pub fn get_contents_of_child(&self, dir: &str) -> io::Result<Vec<(EntryType, String)>> {
-        let mut clone = self.clone();
-
         let type_of_child = self.get_type_of_child(dir);
 
         if type_of_child.is_err() {
@@ -133,8 +148,8 @@ impl FileManager {
             return Err(io::Error::new(io::ErrorKind::InvalidData, "Entry is file"));
         }
 
-        clone.change_dir(dir).unwrap_or(());
-        return clone.get_contents();
+        let path = self.get_path_to_child(dir).unwrap();
+        return FileManager::get_contents_from_path(&path.to_path_buf());
     }
 
     /// Returns the current directory of the file manager as a String

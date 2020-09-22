@@ -52,7 +52,7 @@ fn main() {
     let path_rect = &hm[PATH_RECT_NAME];
     let preview_rect = &hm[PREVIEW_RECT_NAME];
     let main_rect = &hm[MAIN_RECT_NAME];
-    let main_rect_list = main_rect.clone().into_list_colored::<EntryType>(&std_theme);
+    let main_rect_list = main_rect.clone().into_list_colored::<(EntryType, bool)>(&std_theme);
     let preview_rect_list = preview_rect
         .clone()
         .into_list_colored::<EntryType>(&std_theme_no_highlight);
