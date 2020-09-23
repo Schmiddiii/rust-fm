@@ -5,10 +5,10 @@ rust-fm is a cli-file manager written in Rust. It has Vim-like keybindings, but 
 * Navigate in the folder structure of the system
 * Typing shows only the elements you are interested in using fuzzy finding
 * Preview of folders and (text)files
+* Opening files in $EDITOR or using xdg-open
 
 ## What it cannot yet do
-* Basic file and folder actions like copy-paste, editing a file, deleting, ...
-* Open in folder provided in the arguments
+* Basic file and folder actions like copy-paste, deleting, ...
 
 ## How to install it
 * Clone the repository

@@ -60,7 +60,13 @@ impl<'a, W: Write> FmState<'a, W> {
             }
             termion::event::Key::Char(' ') => {
                 self.highlight_selected();
-
+            }
+            termion::event::Key::Char('Y') => {
+                self.fm.yank();
+            }
+            termion::event::Key::Char('P') => {
+                self.fm.paste();
+                self.reload();
             }
 
             termion::event::Key::Char(a) => {

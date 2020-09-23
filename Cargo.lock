@@ -3,6 +3,7 @@
 [[package]]
 name = "boxion"
 version = "0.1.4"
+source = "git+https://github.com/Schmiddiii/boxion#f44f770ae92ffce99800c809edc111bc0ec1dbc3"
 dependencies = [
  "termion",
 ]
