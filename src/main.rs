@@ -21,6 +21,7 @@ use termion::raw::IntoRawMode;
 use termion::screen::AlternateScreen;
 
 use std::io::{stdout, Write};
+use std::env;
 
 const PATH_RECT_NAME: &str = "path_layout";
 const PREVIEW_RECT_NAME: &str = "preview_layout";
@@ -51,10 +52,19 @@ fn main() {
     let path_rect = &hm[PATH_RECT_NAME];
     let preview_rect = &hm[PREVIEW_RECT_NAME];
     let main_rect = &hm[MAIN_RECT_NAME];
-    let main_rect_list = main_rect.clone().into_list_colored::<EntryType>(&std_theme);
+    let main_rect_list = main_rect.clone().into_list_colored::<(EntryType, bool)>(&std_theme);
     let preview_rect_list = preview_rect
         .clone()
         .into_list_colored::<EntryType>(&std_theme_no_highlight);
+
+    let mut args: Vec<String> = env::args().collect();
+    args.remove(0);
+    let path: &str;
+    if args.is_empty() {
+        path = ".";
+    } else {
+        path = &args[0];
+    }
 
     let mut state = FmState {
         path_rect: path_rect,
@@ -62,7 +72,7 @@ fn main() {
         preview_rect_list: *preview_rect_list,
         stdout: screen,
         fzf: None,
-        fm: FileManager::new("."),
+        fm: FileManager::new(path),
     };
 
     write!(state.stdout, "{}", termion::cursor::Hide).unwrap();

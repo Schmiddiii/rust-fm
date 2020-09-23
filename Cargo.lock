@@ -3,7 +3,7 @@
 [[package]]
 name = "boxion"
 version = "0.1.4"
-source = "git+https://github.com/Schmiddiii/boxion#842b8dc1be53489d6fc468831c4270c9b5ab3ddf"
+source = "git+https://github.com/Schmiddiii/boxion#f44f770ae92ffce99800c809edc111bc0ec1dbc3"
 dependencies = [
  "termion",
 ]
@@ -43,7 +43,7 @@ dependencies = [
 
 [[package]]
 name = "rust-fm"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "boxion",
  "mime",

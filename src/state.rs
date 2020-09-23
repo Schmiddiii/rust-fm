@@ -12,8 +12,8 @@ pub struct FmState<'a, W: Write> {
     pub stdout: W,
     pub path_rect: &'a Rect,
     pub preview_rect_list: ListRectColored<'a, EntryType>,
-    pub main_rect_list: ListRectColored<'a, EntryType>,
-    pub fzf: Option<Fzf<char, (EntryType, String)>>,
+    pub main_rect_list: ListRectColored<'a, (EntryType, bool)>,
+    pub fzf: Option<Fzf<char, (EntryType, String, bool)>>,
     pub fm: FileManager,
 }
 
@@ -28,13 +28,13 @@ impl<'a, W: Write> FmState<'a, W> {
 
     /// Resets the elements of main_rect_list and path_rect
     pub fn reload(&mut self) {
-        let mut contents = self.fm.get_contents().unwrap();
+        let mut contents = self.fm.get_contents();
         if self.fzf.is_some() {
             contents = self.fzf.as_ref().unwrap().get_remaining();
         }
         self.set_fzf(contents.clone());
         self.main_rect_list.clear(&mut self.stdout);
-        self.main_rect_list.set_elements(contents);
+        self.main_rect_list.set_elements(contents.into_iter().map(|(t,s,b)| ((t,b),s)).collect());
         self.path_rect.clear(&mut self.stdout);
         self.path_rect
             .write_trimmed(&mut self.stdout, &self.fm.get_path_string(), 0, 0)
@@ -50,14 +50,25 @@ impl<'a, W: Write> FmState<'a, W> {
                 self.fzf = None;
                 self.go_to_parent();
             }
-            termion::event::Key::Char('L') => {
+            termion::event::Key::Char('L') | termion::event::Key::Char('\n') => {
                 self.fzf = None;
                 self.open();
             }
             termion::event::Key::Esc => {
-                self.set_fzf(self.fm.get_contents().unwrap());
+                self.set_fzf(self.fm.get_contents());
                 self.reload();
             }
+            termion::event::Key::Char(' ') => {
+                self.highlight_selected();
+            }
+            termion::event::Key::Char('Y') => {
+                self.fm.yank();
+            }
+            termion::event::Key::Char('P') => {
+                self.fm.paste();
+                self.reload();
+            }
+
             termion::event::Key::Char(a) => {
                 if self.fzf.is_some() && !a.is_uppercase() {
                     self.fzf.as_mut().unwrap().next(a);
@@ -127,13 +138,45 @@ impl<'a, W: Write> FmState<'a, W> {
         }
     }
 
+    /// Highlights the currently selected item
+    fn highlight_selected(&mut self) {
+        let selected = self.main_rect_list.get_selected();
+        if selected.is_none() {
+            return;
+        }
+
+        // Highlight in file manager
+        self.fm.toggle_highlight_of(selected.clone().unwrap());
+
+        // Highlight in fzf
+        if self.fzf.is_some() {
+            let old_fzf_value = self.fzf.as_ref().unwrap().get_value_of(selected.clone().unwrap().to_lowercase().chars().collect());
+            if old_fzf_value.is_some() {
+                let new_fzf_value = (old_fzf_value.clone().unwrap().0, old_fzf_value.clone().unwrap().1, !old_fzf_value.unwrap().2);
+                self.fzf.as_mut().unwrap().change_value_of(selected.clone().unwrap().to_lowercase().chars().collect(), new_fzf_value);
+            }
+        }
+
+        // Highlight in list view
+        let index = self.main_rect_list.get_index();
+        let old_extras = self.main_rect_list.get_selected_extra();
+        if old_extras.is_some() {
+            let new_extras = (old_extras.clone().unwrap().0, !old_extras.clone().unwrap().1);
+            self.main_rect_list.set_element(index, (new_extras, selected.clone().unwrap()));
+
+
+        }
+
+        self.show();
+    }
+
     /// Sets up the fuzzy find to the contents of the directory
-    fn set_fzf(&mut self, contents: Vec<(EntryType, String)>) {
+    fn set_fzf(&mut self, contents: Vec<(EntryType, String, bool)>) {
         self.fzf = Some(Fzf::new(
             contents
                 .clone()
                 .into_iter()
-                .map(|(v, k)| (k.to_lowercase().chars().collect(), (v, k)))
+                .map(|(v, k, b)| (k.to_lowercase().chars().collect(), (v, k, b)))
                 .collect(),
         ));
     }
