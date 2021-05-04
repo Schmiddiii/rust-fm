@@ -1,3 +1,5 @@
+**This repository is archived because of a lack of interest**
+
 # rust-fm
 rust-fm is a cli-file manager written in Rust. It has Vim-like keybindings, but focuses on just typing where to go.
 
